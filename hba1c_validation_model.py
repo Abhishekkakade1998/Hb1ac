@@ -841,7 +841,4 @@ if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("Model ready for deployment!")
     print("=" * 70)
-    
-cds.save_models("hba1c_model.pkl")
-cds = ClinicalDecisionSupport()
-cds.load_models("hba1c_model.pkl")
+
