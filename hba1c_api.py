@@ -155,20 +155,24 @@ def health_check():
 def validate_hba1c():
     try:
         patient_data = request.get_json()
-        
+
         if not patient_data:
             return jsonify({'success': False, 'error': 'No patient data provided'}), 400
-        
+
         # Validate required fields
         required_fields = ['patient_id', 'hba1c', 'fasting_glucose', 'haemoglobin']
         missing_fields = [field for field in required_fields if field not in patient_data]
+
         if missing_fields:
-            return jsonify({'success': False, 'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
-        
-        # Comprehensive assessment using CDS
+            return jsonify({
+                'success': False,
+                'error': f'Missing fields: {", ".join(missing_fields)}'
+            }), 400
+
+        # Run model
         result = cds.assess_test_result(patient_data)
         result = convert_numpy_types(result)
-  
+
         is_reliable = result["test_validity"]["is_reliable"]
         measured = result["hba1c_values"]["measured_hba1c"]
         corrected = result["hba1c_values"]["corrected_hba1c"]
@@ -179,28 +183,27 @@ def validate_hba1c():
 
         # Base response
         simple_output = {
-             "patient_id": result["patient_id"],
-             "status": "Reliable" if is_reliable else "Not Reliable",
-             "measured_hba1c": round(measured, 2),
-             "corrected_hba1c": round(corrected, 2) if correction_applied else "No correction needed",
-             "recommendation": main_recommendation
-         }
+            "patient_id": result["patient_id"],
+            "status": "Reliable" if is_reliable else "Not Reliable",
+            "measured_hba1c": round(measured, 2),
+            "corrected_hba1c": round(corrected, 2) if correction_applied else "No correction needed",
+            "recommendation": main_recommendation
+        }
 
-        # 👇 Only include disorder if recommendation is confirm diagnosis
+        # Include disorder only if needed
         if main_recommendation == "Confirm blood disorder diagnosis":
-              simple_output["suspected_disorder"] = result["disorder_assessment"]["predicted_disorder"]
-              simple_output["disorder_confidence"] = round(
-                    result["disorder_assessment"]["confidence"] * 100, 1
-             )
+            simple_output["suspected_disorder"] = result["disorder_assessment"]["predicted_disorder"]
+            simple_output["disorder_confidence"] = round(
+                result["disorder_assessment"]["confidence"] * 100, 1
+            )
 
-         return jsonify({
-              "success": True,
-              "result": simple_output
-         })
-        
+        return jsonify({
+            "success": True,
+            "result": simple_output
+        })
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-
 # =========================
 # Detect Anomaly
 # =========================
