@@ -12,6 +12,24 @@ from hba1c_validation_model import (
 )
 import json
 from datetime import datetime
+import numpy as np
+
+def convert_numpy_types(obj):
+    """
+    Recursively convert numpy types to native Python types
+    """
+    if isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(i) for i in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    else:
+        return obj
 
 app = Flask(__name__)
 CORS(app)
@@ -149,7 +167,7 @@ def validate_hba1c():
         
         # Comprehensive assessment using CDS
         result = cds.assess_test_result(patient_data)
-        
+        result = convert_numpy_types(result)
         return jsonify({'success': True, 'timestamp': datetime.now().isoformat(), 'assessment': result})
         
     except Exception as e:
