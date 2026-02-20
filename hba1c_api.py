@@ -168,7 +168,35 @@ def validate_hba1c():
         # Comprehensive assessment using CDS
         result = cds.assess_test_result(patient_data)
         result = convert_numpy_types(result)
-        return jsonify({'success': True, 'timestamp': datetime.now().isoformat(), 'assessment': result})
+  
+        is_reliable = result["test_validity"]["is_reliable"]
+        measured = result["hba1c_values"]["measured_hba1c"]
+        corrected = result["hba1c_values"]["corrected_hba1c"]
+        correction_applied = result["hba1c_values"]["correction_applied"]
+
+        recommendations = result["clinical_recommendations"]
+        main_recommendation = recommendations[0]["action"]
+
+        # Base response
+        simple_output = {
+             "patient_id": result["patient_id"],
+             "status": "Reliable" if is_reliable else "Not Reliable",
+             "measured_hba1c": round(measured, 2),
+             "corrected_hba1c": round(corrected, 2) if correction_applied else "No correction needed",
+             "recommendation": main_recommendation
+         }
+
+        # 👇 Only include disorder if recommendation is confirm diagnosis
+        if main_recommendation == "Confirm blood disorder diagnosis":
+              simple_output["suspected_disorder"] = result["disorder_assessment"]["predicted_disorder"]
+              simple_output["disorder_confidence"] = round(
+                    result["disorder_assessment"]["confidence"] * 100, 1
+             )
+
+         return jsonify({
+              "success": True,
+              "result": simple_output
+         })
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
